@@ -1,7 +1,7 @@
 import torch
 from torch import nn
-from mha import MultiHeadAttention
-from ffn import FeedForward
+from .mha import MultiHeadAttention
+from .ffn import FeedForward
 
 class TransformerLayer(nn.Module):
     """

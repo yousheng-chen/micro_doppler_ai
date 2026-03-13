@@ -43,7 +43,13 @@ It's a simple experiment that anyone can run and play with ViTs.
 import torch
 from torch import nn
 
-from transformerlayer import TransformerLayer
+from .transformerlayer import TransformerLayer
+
+
+def clone_module_list(module, n):
+    """复制模块n次，返回ModuleList"""
+    return nn.ModuleList([module for _ in range(n)])
+
 
 class PatchEmbeddings(nn.Module):
     """
