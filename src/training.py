@@ -12,10 +12,11 @@ import torch.optim as optim
 from tqdm import tqdm
 import os
 import time
+import pickle
 
 
 # 加载数据集
-data_dir = "data/processed_data"
+data_dir = "../data/processed_data"
 
 def get_dataloader(data_dir, img_size: list = [224, 224], batch_size: int = 8) -> Tuple[DataLoader, DataLoader, DataLoader]:
     transform = transforms.Compose(
@@ -145,11 +146,13 @@ def validate(model, val_loader, criterion, device):
     return avg_loss, accuracy
 
 
-def train_vit(num_epochs: int = 10, batch_size: int = 16, learning_rate: float = 0.001):
+def train_vit(num_epochs: int = 100, batch_size: int = 16, learning_rate: float = 0.001):
     """
     训练ViT模型
-    """
-    # 设置设备
+    """    # 清空GPU缓存
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        # 设置设备
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"使用设备: {device}")
     
@@ -157,7 +160,7 @@ def train_vit(num_epochs: int = 10, batch_size: int = 16, learning_rate: float =
     print("加载数据集...")
     train_loader, val_loader, test_loader, class_names = get_dataloader(
         data_dir, 
-        img_size=[224, 224], 
+        img_size=[864, 656], 
         batch_size=batch_size
     )
     print(f"类别: {class_names}")
@@ -166,12 +169,12 @@ def train_vit(num_epochs: int = 10, batch_size: int = 16, learning_rate: float =
     # 构建模型
     print("构建ViT模型...")
     model = build_vit_model(
-        d_model=128,
+        d_model=256,
         n_heads=8,
-        n_layers=4,
+        n_layers=6,
         patch_size=16,
         n_classes=n_classes,
-        d_ff=512
+        d_ff=1024
     )
     model = model.to(device)
     
@@ -190,6 +193,12 @@ def train_vit(num_epochs: int = 10, batch_size: int = 16, learning_rate: float =
     checkpoint_dir = "checkpoint"
     os.makedirs(checkpoint_dir, exist_ok=True)
     
+    # 初始化历史记录
+    train_losses = []
+    train_accs = []
+    val_losses = []
+    val_accs = []
+    
     # 训练循环
     best_val_acc = 0.0
     print("\n开始训练...")
@@ -203,6 +212,12 @@ def train_vit(num_epochs: int = 10, batch_size: int = 16, learning_rate: float =
         
         # 验证
         val_loss, val_acc = validate(model, val_loader, criterion, device)
+        
+        # 记录历史
+        train_losses.append(train_loss)
+        train_accs.append(train_acc)
+        val_losses.append(val_loss)
+        val_accs.append(val_acc)
         
         # 学习率调度
         scheduler.step()
@@ -221,6 +236,17 @@ def train_vit(num_epochs: int = 10, batch_size: int = 16, learning_rate: float =
     print(f"\n训练完成! 总耗时: {training_time:.2f}秒")
     print(f"最佳验证精度: {best_val_acc:.2f}%")
     
+    # 保存训练历史
+    history = {
+        'train_losses': train_losses,
+        'train_accs': train_accs,
+        'val_losses': val_losses,
+        'val_accs': val_accs
+    }
+    with open(os.path.join(checkpoint_dir, 'training_history.pkl'), 'wb') as f:
+        pickle.dump(history, f)
+    print(f"保存训练历史到 {os.path.join(checkpoint_dir, 'training_history.pkl')}")
+    
     # 测试
     print("\n测试模型...")
     model.load_state_dict(torch.load(os.path.join(checkpoint_dir, "best_vit_model.pth")))
@@ -233,7 +259,7 @@ def train_vit(num_epochs: int = 10, batch_size: int = 16, learning_rate: float =
 if __name__ == "__main__":
     # 训练模型
     model = train_vit(
-        num_epochs=5,
-        batch_size=8,
-        learning_rate=0.001
+        num_epochs=10,
+        batch_size=4,
+        learning_rate=0.0001
     )
