@@ -17,7 +17,7 @@ import time
 # 加载数据集
 data_dir = "data/processed_data"
 
-def get_dataloader(data_dir, img_size: list = [656, 864], batch_size: int = 32) -> Tuple[DataLoader, DataLoader, DataLoader]:
+def get_dataloader(data_dir, img_size: list = [224, 224], batch_size: int = 8) -> Tuple[DataLoader, DataLoader, DataLoader]:
     transform = transforms.Compose(
         [
             transforms.Resize((img_size[0], img_size[1])),
@@ -157,7 +157,7 @@ def train_vit(num_epochs: int = 10, batch_size: int = 16, learning_rate: float =
     print("加载数据集...")
     train_loader, val_loader, test_loader, class_names = get_dataloader(
         data_dir, 
-        img_size=[656, 864], 
+        img_size=[224, 224], 
         batch_size=batch_size
     )
     print(f"类别: {class_names}")
@@ -166,12 +166,12 @@ def train_vit(num_epochs: int = 10, batch_size: int = 16, learning_rate: float =
     # 构建模型
     print("构建ViT模型...")
     model = build_vit_model(
-        d_model=256,
+        d_model=128,
         n_heads=8,
-        n_layers=6,
+        n_layers=4,
         patch_size=16,
         n_classes=n_classes,
-        d_ff=1024
+        d_ff=512
     )
     model = model.to(device)
     
@@ -233,7 +233,7 @@ def train_vit(num_epochs: int = 10, batch_size: int = 16, learning_rate: float =
 if __name__ == "__main__":
     # 训练模型
     model = train_vit(
-        num_epochs=10,
-        batch_size=16,
+        num_epochs=5,
+        batch_size=8,
         learning_rate=0.001
     )

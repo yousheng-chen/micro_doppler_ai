@@ -261,7 +261,7 @@ class VisionTransformer(nn.Module):
             x = layer(x=x, mask=None)
 
         # Get the transformer output of the `[CLS]` token (which is the first in the sequence).
-        x = x[0]
+        x = x[:, 0, :]  # shape: [batch_size, d_model]
 
         # Layer normalization,归一化层
         x = self.ln(x)
