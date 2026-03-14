@@ -16,7 +16,8 @@ import pickle
 
 
 # 加载数据集
-data_dir = "../data/processed_data"
+#data_dir = "../data/processed_data"
+data_dir = "data/processed_data"
 
 def get_dataloader(data_dir, img_size: list = [224, 224], batch_size: int = 8) -> Tuple[DataLoader, DataLoader, DataLoader]:
     transform = transforms.Compose(
