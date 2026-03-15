@@ -2,6 +2,7 @@ from models.vit import VisionTransformer, PatchEmbeddings, LearnedPositionalEmbe
 from models.transformerlayer import TransformerLayer
 from models.mha import MultiHeadAttention
 from models.ffn import FeedForward
+from config import config
 
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -16,6 +17,11 @@ import numpy as np
 
 
 def get_dataloader(data_dir, img_size: list = [224, 224], batch_size: int = 8) -> Tuple[DataLoader, DataLoader, DataLoader]:
+    if img_size is None:
+        img_size = config['img_size']
+    if batch_size is None:
+        batch_size = config['batch_size']
+    
     transform = transforms.Compose(
         [
             transforms.Resize((img_size[0], img_size[1])),
@@ -27,8 +33,8 @@ def get_dataloader(data_dir, img_size: list = [224, 224], batch_size: int = 8) -
     dataset = datasets.ImageFolder(root=data_dir, transform=transform)
     
     total_size = len(dataset)
-    train_size = int(0.8 * total_size)
-    val_size = int(0.1 * total_size)
+    train_size = int(0.7 * total_size)
+    val_size = int(0.15 * total_size)
     test_size = total_size - train_size - val_size
     
     train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
@@ -44,6 +50,19 @@ def get_dataloader(data_dir, img_size: list = [224, 224], batch_size: int = 8) -
 
 def build_vit_model(d_model: int = 512, n_heads: int = 8, n_layers: int = 12, 
                    patch_size: int = 16, n_classes: int = 6, d_ff: int = 2048):
+    
+    if d_model is None:
+        d_model = config['d_model']
+    if n_heads is None:
+        n_heads = config['n_heads']
+    if n_layers is None:
+        n_layers = config['n_layers']
+    if patch_size is None:
+        patch_size = config['patch_size']
+    if d_ff is None:
+        d_ff = config['d_ff']
+    
+    
     """
     构建完整的Vision Transformer模型
     
