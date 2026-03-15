@@ -2,6 +2,7 @@ from models.vit import VisionTransformer, PatchEmbeddings, LearnedPositionalEmbe
 from models.transformerlayer import TransformerLayer
 from models.mha import MultiHeadAttention
 from models.ffn import FeedForward
+from config import config
 
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -13,13 +14,16 @@ from tqdm import tqdm
 import os
 import time
 import pickle
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.metrics import confusion_matrix
 
-
-# 加载数据集
-#data_dir = "../data/processed_data"
-data_dir = "data/processed_data"
-
-def get_dataloader(data_dir, img_size: list = [224, 224], batch_size: int = 8) -> Tuple[DataLoader, DataLoader, DataLoader]:
+def get_dataloader(data_dir, img_size: list = None, batch_size: int = None) -> Tuple[DataLoader, DataLoader, DataLoader]:
+    if img_size is None:
+        img_size = config['img_size']
+    if batch_size is None:
+        batch_size = config['batch_size']
+    
     transform = transforms.Compose(
         [
             transforms.Resize((img_size[0], img_size[1])),
@@ -46,8 +50,19 @@ def get_dataloader(data_dir, img_size: list = [224, 224], batch_size: int = 8) -
     return train_loader, val_loader, test_loader, dataset.classes
 
 
-def build_vit_model(d_model: int = 512, n_heads: int = 8, n_layers: int = 12, 
-                   patch_size: int = 16, n_classes: int = 6, d_ff: int = 2048):
+def build_vit_model(d_model: int = None, n_heads: int = None, n_layers: int = None, 
+                   patch_size: int = None, n_classes: int = None, d_ff: int = None):
+    if d_model is None:
+        d_model = config['d_model']
+    if n_heads is None:
+        n_heads = config['n_heads']
+    if n_layers is None:
+        n_layers = config['n_layers']
+    if patch_size is None:
+        patch_size = config['patch_size']
+    if d_ff is None:
+        d_ff = config['d_ff']
+    
     """
     构建完整的Vision Transformer模型
     
@@ -147,7 +162,14 @@ def validate(model, val_loader, criterion, device):
     return avg_loss, accuracy
 
 
-def train_vit(num_epochs: int = 100, batch_size: int = 16, learning_rate: float = 0.001):
+def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: float = None):
+    if num_epochs is None:
+        num_epochs = config['num_epochs']
+    if batch_size is None:
+        batch_size = config['batch_size']
+    if learning_rate is None:
+        learning_rate = config['learning_rate']
+    
     """
     训练ViT模型
     """    # 清空GPU缓存
@@ -160,8 +182,8 @@ def train_vit(num_epochs: int = 100, batch_size: int = 16, learning_rate: float 
     # 创建数据加载器
     print("加载数据集...")
     train_loader, val_loader, test_loader, class_names = get_dataloader(
-        data_dir, 
-        img_size=[864, 656], 
+        config['data_dir'], 
+        img_size=config['img_size'], 
         batch_size=batch_size
     )
     print(f"类别: {class_names}")
@@ -170,12 +192,12 @@ def train_vit(num_epochs: int = 100, batch_size: int = 16, learning_rate: float 
     # 构建模型
     print("构建ViT模型...")
     model = build_vit_model(
-        d_model=256,
-        n_heads=8,
-        n_layers=6,
-        patch_size=16,
+        d_model=config['d_model'],
+        n_heads=config['n_heads'],
+        n_layers=config['n_layers'],
+        patch_size=config['patch_size'],
         n_classes=n_classes,
-        d_ff=1024
+        d_ff=config['d_ff']
     )
     model = model.to(device)
     
@@ -187,11 +209,11 @@ def train_vit(num_epochs: int = 100, batch_size: int = 16, learning_rate: float 
     
     # 损失函数和优化器
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=config['weight_decay'])
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     
     # 创建checkpoint目录
-    checkpoint_dir = "checkpoint"
+    checkpoint_dir = config['checkpoint_dir']
     os.makedirs(checkpoint_dir, exist_ok=True)
     
     # 初始化历史记录
@@ -251,16 +273,108 @@ def train_vit(num_epochs: int = 100, batch_size: int = 16, learning_rate: float 
     # 测试
     print("\n测试模型...")
     model.load_state_dict(torch.load(os.path.join(checkpoint_dir, "best_vit_model.pth")))
+
+        
+    # 加载训练历史并绘制
+    with open(os.path.join(config['checkpoint_dir'], 'training_history.pkl'), 'rb') as f:
+        history = pickle.load(f)
+    plot_training_history(history, save_path=os.path.join(config['checkpoint_dir'], 'training_history.png'))
+    
+    # 加载最好的模型
+    model.load_state_dict(torch.load(os.path.join(config['checkpoint_dir'], "best_vit_model.pth")))
+    
+    
+    # 计算预测和标签
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    preds, labels = get_predictions_and_labels(model, test_loader, device)
+    
+    # 计算混淆矩阵
+    cm = confusion_matrix(labels, preds)
+    
+    # 绘制混淆矩阵
+    plot_confusion_matrix(cm, class_names, save_path=os.path.join(config['checkpoint_dir'], 'confusion_matrix.png'))
+    
     test_loss, test_acc = validate(model, test_loader, criterion, device)
     print(f"测试损失: {test_loss:.4f}, 测试精度: {test_acc:.2f}%")
+    
     
     return model
 
 
+def plot_training_history(history, save_path=None):
+    """绘制训练历史"""
+    epochs = range(1, len(history['train_losses']) + 1)
+    
+    fig, ((ax1, ax2)) = plt.subplots(1, 2, figsize=(15, 5))
+    
+    # 损失函数
+    ax1.plot(epochs, history['train_losses'], 'b-', label='Training Loss')
+    ax1.plot(epochs, history['val_losses'], 'r-', label='Validation Loss')
+    ax1.set_title('Training and Validation Loss')
+    ax1.set_xlabel('Epochs')
+    ax1.set_ylabel('Loss')
+    ax1.legend()
+    ax1.grid(True)
+    
+    # 准确率
+    ax2.plot(epochs, history['train_accs'], 'b-', label='Training Accuracy')
+    ax2.plot(epochs, history['val_accs'], 'r-', label='Validation Accuracy')
+    ax2.set_title('Training and Validation Accuracy')
+    ax2.set_xlabel('Epochs')
+    ax2.set_ylabel('Accuracy (%)')
+    ax2.legend()
+    ax2.grid(True)
+    
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path)
+    plt.show()
+
+
+def plot_confusion_matrix(cm, class_names, save_path=None):
+    """绘制混淆矩阵"""
+    fig, ax = plt.subplots(figsize=(8, 6))
+    im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    ax.figure.colorbar(im, ax=ax)
+    
+    ax.set(xticks=np.arange(cm.shape[1]),
+           yticks=np.arange(cm.shape[0]),
+           xticklabels=class_names, yticklabels=class_names,
+           title='Confusion Matrix',
+           ylabel='True label',
+           xlabel='Predicted label')
+    
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+    
+    fmt = 'd'
+    thresh = cm.max() / 2.
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(j, i, format(cm[i, j], fmt),
+                    ha="center", va="center",
+                    color="white" if cm[i, j] > thresh else "black")
+    
+    fig.tight_layout()
+    if save_path:
+        plt.savefig(save_path)
+    plt.show()
+
+
+def get_predictions_and_labels(model, test_loader, device):
+    """获取模型在测试集上的预测和真实标签"""
+    model.eval()
+    all_preds = []
+    all_labels = []
+    with torch.no_grad():
+        for images, labels in tqdm(test_loader, desc="Testing"):
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            _, preds = torch.max(outputs, 1)
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+    return all_preds, all_labels
+
 if __name__ == "__main__":
     # 训练模型
-    model = train_vit(
-        num_epochs=10,
-        batch_size=4,
-        learning_rate=0.0001
-    )
+    model = train_vit()
