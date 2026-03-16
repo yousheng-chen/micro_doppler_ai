@@ -17,6 +17,7 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import confusion_matrix
+import random
 
 def get_dataloader(data_dir, img_size: list = None, batch_size: int = None) -> Tuple[DataLoader, DataLoader, DataLoader]:
     if img_size is None:
@@ -172,7 +173,16 @@ def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: flo
     
     """
     训练ViT模型
-    """    # 清空GPU缓存
+    """
+    # 设置随机种子以确保可重复性
+    seed = 42
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    
+    # 清空GPU缓存
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
         # 设置设备
