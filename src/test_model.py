@@ -104,8 +104,8 @@ def main():
     print(f"使用设备: {device}")
     
     # 数据目录
-    original_data_dir = "../data/original_data"
-    model_path = "checkpoint/best_vit_model.pth"
+    original_data_dir = "D:\\Code\\python\\Micro-Doppler-vit\\Body Posture"
+    model_path = "checkpoint/second_train/best_vit_model.pth"
     
     # 检查文件是否存在
     if not os.path.exists(original_data_dir):
@@ -134,7 +134,7 @@ def main():
     
     # 计算准确率
     accuracy = np.mean(preds == labels)
-    print(".4f")
+    print(f"accuracy: {accuracy:.4f}")
     
     # 打印分类报告
     print("\n分类报告:")
