@@ -217,7 +217,7 @@ class VisionTransformer(nn.Module):
         # Classification head
         self.classification = classification
         # Make copies of the transformer layer, with `n_layers`
-        self.transformer_layers = l(transformer_layer, n_layers)
+        self.transformer_layers = clone_module_list(transformer_layer, n_layers)
 
         # `[CLS]` token embedding,一些改进的模型用全局平均池化替换了 `[CLS]` token，x = x.mean(dim=1)
         # transformer_layer.size = d_model, shape = [batch_size = 1, seq_len = 1, d_model]
