@@ -47,9 +47,13 @@ from .transformerlayer import TransformerLayer
 
 
 def clone_module_list(module, n):
-    """复制模块n次，返回ModuleList"""
+    """迭代n次，每次都共享参数，返回一个nn.ModuleList"""
     return nn.ModuleList([module for _ in range(n)])
-
+# 另一种实现方法，使用copy.deepcopy确保每次都生成一个全新的、参数独立的模块实例
+# import copy
+# def clone_module_list(module, n):
+#     # 使用 copy.deepcopy 确保每次都生成一个全新的、参数独立的模块实例
+#     return nn.ModuleList([copy.deepcopy(module) for _ in range(n)])
 
 class PatchEmbeddings(nn.Module):
     """
@@ -213,7 +217,7 @@ class VisionTransformer(nn.Module):
         # Classification head
         self.classification = classification
         # Make copies of the transformer layer, with `n_layers`
-        self.transformer_layers = clone_module_list(transformer_layer, n_layers)
+        self.transformer_layers = l(transformer_layer, n_layers)
 
         # `[CLS]` token embedding,一些改进的模型用全局平均池化替换了 `[CLS]` token，x = x.mean(dim=1)
         # transformer_layer.size = d_model, shape = [batch_size = 1, seq_len = 1, d_model]
