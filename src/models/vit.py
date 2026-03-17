@@ -47,9 +47,13 @@ from .transformerlayer import TransformerLayer
 
 
 def clone_module_list(module, n):
-    """复制模块n次，返回ModuleList"""
+    """迭代n次，每次都共享参数，返回一个nn.ModuleList"""
     return nn.ModuleList([module for _ in range(n)])
-
+# 另一种实现方法，使用copy.deepcopy确保每次都生成一个全新的、参数独立的模块实例
+# import copy
+# def clone_module_list(module, n):
+#     # 使用 copy.deepcopy 确保每次都生成一个全新的、参数独立的模块实例
+#     return nn.ModuleList([copy.deepcopy(module) for _ in range(n)])
 
 class PatchEmbeddings(nn.Module):
     """

@@ -4,3 +4,4 @@ tqdm
 matplotlib
 scikit-learn
 pillow
+seaborn

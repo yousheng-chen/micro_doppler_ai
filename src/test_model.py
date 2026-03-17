@@ -104,7 +104,7 @@ def main():
     print(f"使用设备: {device}")
     
     # 数据目录
-    original_data_dir = "D:\\Code\\python\\Micro-Doppler-vit\\Body Posture"
+    original_data_dir = "../data/original_data"
     model_path = "checkpoint/second_train/best_vit_model.pth"
     
     # 检查文件是否存在
