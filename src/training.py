@@ -387,6 +387,5 @@ def get_predictions_and_labels(model, test_loader, device):
 
 if __name__ == "__main__":
     # 训练模型
-    print(f"模型信息:\n{model.info()}")
     model = train_vit()
     
