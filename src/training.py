@@ -2,7 +2,7 @@ from models.vit import VisionTransformer, PatchEmbeddings, LearnedPositionalEmbe
 from models.transformerlayer import TransformerLayer
 from models.mha import MultiHeadAttention
 from models.ffn import FeedForward
-from config import config
+from config import vit_config
 
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -21,9 +21,9 @@ import random
 
 def get_dataloader(data_dir, img_size: list = None, batch_size: int = None) -> Tuple[DataLoader, DataLoader, DataLoader]:
     if img_size is None:
-        img_size = config['img_size']
+        img_size = vit_config['img_size']
     if batch_size is None:
-        batch_size = config['batch_size']
+        batch_size = vit_config['batch_size']
     
     transform = transforms.Compose(
         [
@@ -54,15 +54,15 @@ def get_dataloader(data_dir, img_size: list = None, batch_size: int = None) -> T
 def build_vit_model(d_model: int = None, n_heads: int = None, n_layers: int = None, 
                    patch_size: int = None, n_classes: int = None, d_ff: int = None):
     if d_model is None:
-        d_model = config['d_model']
+        d_model = vit_config['d_model']
     if n_heads is None:
-        n_heads = config['n_heads']
+        n_heads = vit_config['n_heads']
     if n_layers is None:
-        n_layers = config['n_layers']
+        n_layers = vit_config['n_layers']
     if patch_size is None:
-        patch_size = config['patch_size']
+        patch_size = vit_config['patch_size']
     if d_ff is None:
-        d_ff = config['d_ff']
+        d_ff = vit_config['d_ff']
     
     """
     构建完整的Vision Transformer模型
@@ -165,11 +165,11 @@ def validate(model, val_loader, criterion, device):
 
 def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: float = None):
     if num_epochs is None:
-        num_epochs = config['num_epochs']
+        num_epochs = vit_config['num_epochs']
     if batch_size is None:
-        batch_size = config['batch_size']
+        batch_size = vit_config['batch_size']
     if learning_rate is None:
-        learning_rate = config['learning_rate']
+        learning_rate = vit_config['learning_rate']
     
     """
     训练ViT模型
@@ -192,8 +192,8 @@ def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: flo
     # 创建数据加载器
     print("加载数据集...")
     train_loader, val_loader, test_loader, class_names = get_dataloader(
-        config['data_dir'], 
-        img_size=config['img_size'], 
+        vit_config['data_dir'], 
+        img_size=vit_config['img_size'], 
         batch_size=batch_size
     )
     print(f"类别: {class_names}")
@@ -202,12 +202,12 @@ def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: flo
     # 构建模型
     print("构建ViT模型...")
     model = build_vit_model(
-        d_model=config['d_model'],
-        n_heads=config['n_heads'],
-        n_layers=config['n_layers'],
-        patch_size=config['patch_size'],
+        d_model=vit_config['d_model'],
+        n_heads=vit_config['n_heads'],
+        n_layers=vit_config['n_layers'],
+        patch_size=vit_config['patch_size'],
         n_classes=n_classes,
-        d_ff=config['d_ff']
+        d_ff=vit_config['d_ff']
     )
     model = model.to(device)
     
@@ -219,11 +219,11 @@ def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: flo
     
     # 损失函数和优化器
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=config['weight_decay'])
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=vit_config['weight_decay'])
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     
     # 创建checkpoint目录
-    checkpoint_dir = config['checkpoint_dir']
+    checkpoint_dir = vit_config['checkpoint_dir']
     os.makedirs(checkpoint_dir, exist_ok=True)
     
     # 初始化历史记录
@@ -286,12 +286,12 @@ def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: flo
 
         
     # 加载训练历史并绘制
-    with open(os.path.join(config['checkpoint_dir'], 'training_history.pkl'), 'rb') as f:
+    with open(os.path.join(vit_config['checkpoint_dir'], 'training_history.pkl'), 'rb') as f:
         history = pickle.load(f)
-    plot_training_history(history, save_path=os.path.join(config['checkpoint_dir'], 'training_history.png'))
+    plot_training_history(history, save_path=os.path.join(vit_config['checkpoint_dir'], 'training_history.png'))
     
     # 加载最好的模型
-    model.load_state_dict(torch.load(os.path.join(config['checkpoint_dir'], "best_vit_model.pth")))
+    model.load_state_dict(torch.load(os.path.join(vit_config['checkpoint_dir'], "best_vit_model.pth")))
     
     
     # 计算预测和标签
@@ -302,7 +302,7 @@ def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: flo
     cm = confusion_matrix(labels, preds)
     
     # 绘制混淆矩阵
-    plot_confusion_matrix(cm, class_names, save_path=os.path.join(config['checkpoint_dir'], 'confusion_matrix.png'))
+    plot_confusion_matrix(cm, class_names, save_path=os.path.join(vit_config['checkpoint_dir'], 'confusion_matrix.png'))
     
     test_loss, test_acc = validate(model, test_loader, criterion, device)
     print(f"测试损失: {test_loss:.4f}, 测试精度: {test_acc:.2f}%")
@@ -387,4 +387,6 @@ def get_predictions_and_labels(model, test_loader, device):
 
 if __name__ == "__main__":
     # 训练模型
+    print(f"模型信息:\n{model.info()}")
     model = train_vit()
+    
