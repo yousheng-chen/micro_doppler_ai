@@ -1,7 +1,7 @@
 # vit超参数配置文件
 vit_config = {
     # 数据相关
-    'data_dir': "../data/processed_data",
+    'data_dir': "../data/0db",
     'img_size': [224, 224],
     'batch_size': 32,
 
@@ -24,7 +24,7 @@ vit_config = {
 # Set the configurations
 ResNet18_config = {
         # 数据相关
-    'data_dir': "../data/processed_data",
+    'data_dir': "../data/0db",
     'img_size': [224, 224],
     'batch_size': 32,
 
