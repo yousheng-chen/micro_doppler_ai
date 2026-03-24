@@ -24,12 +24,12 @@ vit_config = {
 # Set the configurations
 ResNet18_config = {
         # 数据相关
-    'data_dir': "../data/0db",
+    'data_dir': "D:\\Code\\python\\data",
     'img_size': [224, 224],
-    'batch_size': 32,
+    'batch_size': 8,
 
     # 训练相关
-    'num_epochs': 10,
+    'num_epochs': 1,
     'learning_rate': 0.0001,
     'weight_decay': 1e-5,
 
