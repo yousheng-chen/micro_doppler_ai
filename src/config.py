@@ -1,7 +1,7 @@
 # vit超参数配置文件
 vit_config = {
     # 数据相关
-    'data_dir': "../data/0db",
+    'data_dir': "../data/all_data",
     'img_size': [224, 224],
     'batch_size': 32,
 
@@ -24,12 +24,12 @@ vit_config = {
 # Set the configurations
 ResNet18_config = {
         # 数据相关
-    'data_dir': "D:\\Code\\python\\data",
+    'data_dir': "../data/all_data",
     'img_size': [224, 224],
-    'batch_size': 8,
+    'batch_size': 32,
 
     # 训练相关
-    'num_epochs': 1,
+    'num_epochs': 10,
     'learning_rate': 0.0001,
     'weight_decay': 1e-5,
 
