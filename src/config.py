@@ -3,7 +3,7 @@ vit_config = {
     # 数据相关
     'data_dir': "../data/all_data",
     'img_size': [224, 224],
-    'batch_size': 32,
+    'batch_size': 64,
 
     # 模型相关
     'd_model': 256,
@@ -14,8 +14,8 @@ vit_config = {
 
     # 训练相关
     'num_epochs': 10,
-    'learning_rate': 0.0001,
-    'weight_decay': 1e-5,
+    'learning_rate': 0.0001,   # 学习率
+    'weight_decay': 0.05,    # 权重衰减,用于防止过拟合,数值越大,衰减越大
 
     # 其他
     'checkpoint_dir': "../checkpoint/vit"

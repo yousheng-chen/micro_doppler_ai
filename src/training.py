@@ -19,30 +19,73 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import random
 
-def get_dataloader(data_dir, img_size: list = None, batch_size: int = None) -> Tuple[DataLoader, DataLoader, DataLoader]:
+def compute_mean_std(root_dir) -> Tuple[torch.Tensor, torch.Tensor]:
+    """计算数据集的均值和标准差"""
+    dataset = datasets.ImageFolder(
+        root=root_dir,
+        transform=transforms.ToTensor()
+        )
+    
+    
+    loader = DataLoader(dataset, batch_size=64, shuffle=False)
+    
+    mean = 0.0
+    std = 0.0
+    total_images = 0
+    
+    for images, _ in loader:
+        batch_samples = images.size(0)
+        images = images.view(batch_samples, images.size(1), -1)
+
+        mean += images.mean(2).sum(0)
+        std += images.std(2).sum(0)
+        total_images += batch_samples
+
+    mean /= total_images
+    std /= total_images
+
+    print("mean:", mean)
+    print("std:", std)
+
+    return mean, std
+
+
+
+def get_dataloader(data_dir, seed=42, img_size: list = None, batch_size: int = None) -> Tuple[DataLoader, DataLoader, DataLoader]:
     if img_size is None:
         img_size = vit_config['img_size']
     if batch_size is None:
         batch_size = vit_config['batch_size']
     
+    # mean, std = compute_mean_std(data_dir)
+    """
+    mean: tensor([0.0156, 0.1411, 0.8904])
+    std: tensor([0.0558, 0.1147, 0.0605])
+    """
+    
     transform = transforms.Compose(
         [
             transforms.Resize((img_size[0], img_size[1])),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5], std=[0.5]),
+            transforms.Normalize(
+                mean=[0.0156, 0.1411, 0.8904],
+                std=[0.0558, 0.1147, 0.0605]
+                ),
         ]
     )
     
     dataset = datasets.ImageFolder(root=data_dir, transform=transform)
     
     total_size = len(dataset)
-    train_size = int(0.8 * total_size)
-    val_size = int(0.1 * total_size)
+    train_size = int(0.7 * total_size)
+    val_size = int(0.15 * total_size)
     test_size = total_size - train_size - val_size
     
     train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
         dataset, 
-        [train_size, val_size, test_size])
+        [train_size, val_size, test_size],
+        generator=torch.Generator().manual_seed(seed)
+    )
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
@@ -219,7 +262,7 @@ def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: flo
     
     # 损失函数和优化器
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=vit_config['weight_decay'])
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=vit_config['weight_decay'])
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     
     # 创建checkpoint目录

@@ -17,7 +17,7 @@ from typing import Tuple
 
 
 # Prepare dataloader
-def get_dataloader(data_dir, img_size: list = None, batch_size: int = None) -> Tuple[DataLoader, DataLoader, DataLoader]:
+def get_dataloader(data_dir, seed=42, img_size: list = None, batch_size: int = None) -> Tuple[DataLoader, DataLoader, DataLoader]:
     if img_size is None:
         img_size = ResNet18_config['img_size']
     if batch_size is None:
@@ -27,20 +27,24 @@ def get_dataloader(data_dir, img_size: list = None, batch_size: int = None) -> T
         [
             transforms.Resize((img_size[0], img_size[1])),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5], std=[0.5]),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225]),
         ]
     )
     
     dataset = datasets.ImageFolder(root=data_dir, transform=transform)
     
     total_size = len(dataset)
-    train_size = int(0.8 * total_size)
-    val_size = int(0.1 * total_size)
+    train_size = int(0.7 * total_size)
+    val_size = int(0.15 * total_size)
     test_size = total_size - train_size - val_size
     
     train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
         dataset, 
-        [train_size, val_size, test_size])
+        [train_size, val_size, test_size],
+        generator=torch.Generator().manual_seed(seed)
+        )
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
@@ -121,7 +125,7 @@ def train_resnet18(num_epochs: int = None, batch_size: int = None, learning_rate
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(sd)
+        torch.cuda.manual_seed_all(seed)
     
     # clear cache before training
     if torch.cuda.is_available():
@@ -150,8 +154,8 @@ def train_resnet18(num_epochs: int = None, batch_size: int = None, learning_rate
     
     # loss function and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=ResNet18_config['weight_decay'])
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=ResNet18_config['weight_decay'])
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1) # 等间隔调整（Step Decay）
     
     # 创建checkpoint目录
     checkpoint_dir = ResNet18_config['checkpoint_dir']
