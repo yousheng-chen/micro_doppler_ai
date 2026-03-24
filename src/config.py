@@ -18,7 +18,7 @@ vit_config = {
     'weight_decay': 1e-5,
 
     # 其他
-    'checkpoint_dir': "checkpoint"
+    'checkpoint_dir': "../checkpoint/vit"
 }
 
 # Set the configurations
@@ -34,5 +34,5 @@ ResNet18_config = {
     'weight_decay': 1e-5,
 
     # 其他
-    'checkpoint_dir': "ResNet18_checkpoint"
+    'checkpoint_dir': "../checkpoint/resnet18"
 }
