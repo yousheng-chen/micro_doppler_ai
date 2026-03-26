@@ -19,6 +19,10 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import random
 
+from PIL import Image
+from torch.utils.data import Dataset
+
+
 def compute_mean_std(root_dir) -> Tuple[torch.Tensor, torch.Tensor]:
     """计算数据集的均值和标准差"""
     dataset = datasets.ImageFolder(
@@ -49,6 +53,18 @@ def compute_mean_std(root_dir) -> Tuple[torch.Tensor, torch.Tensor]:
 
     return mean, std
 
+
+class TensorDataset(Dataset):
+    def __init__(self, data, labels):
+        self.data = data
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx], self.labels[idx]
+    
 
 
 def get_dataloader(data_dir, seed=42, img_size: list = None, batch_size: int = None) -> Tuple[DataLoader, DataLoader, DataLoader]:
@@ -87,12 +103,102 @@ def get_dataloader(data_dir, seed=42, img_size: list = None, batch_size: int = N
         generator=torch.Generator().manual_seed(seed)
     )
     
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=12, pin_memory=True, persistent_workers=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True, persistent_workers=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True, persistent_workers=True)
     
     return train_loader, val_loader, test_loader, dataset.classes
 
+def get_all_data(datapath, batch_size: int = None) -> Tuple[torch.Tensor, torch.Tensor]:
+    # Implementation for getting all data from a given path
+    all_data = []
+    all_labels = []
+    obj = torch.load(datapath)
+
+    # 2️⃣ 兼容不同保存格式
+    if isinstance(obj, dict):
+        data = obj["data"]
+        labels = obj["labels"]
+    else:
+        data, labels = obj
+        
+    all_data.append(data)
+    all_labels.append(labels)
+    
+    dataset = TensorDataset(all_data, all_labels)
+    
+    # 4️⃣ 划分数据集
+    total_size = len(dataset)
+    train_size = int(0.75 * total_size)
+    val_size = int(0.15 * total_size)
+    test_size = total_size - train_size - val_size
+
+    generator = torch.Generator().manual_seed(42)
+
+    train_ds, val_ds, test_ds = torch.utils.data.random_split(
+        dataset,
+        [train_size, val_size, test_size],
+        generator=generator
+    )
+
+    # 5️⃣ DataLoader
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True, persistent_workers=True)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True, persistent_workers=True)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True, persistent_workers=True)
+
+
+    return train_loader, val_loader, test_loader, dataset.labels.unique().tolist()
+
+def get_tensor_dataloader(data_dir, batch_size: int = None) -> Tuple[DataLoader, DataLoader, DataLoader]:
+    all_data = []
+    all_labels = []
+
+    # 1️⃣ 遍历 cache 目录
+    for file in os.listdir(data_dir):
+        if file.endswith(".pt"):
+            path = os.path.join(data_dir, file)
+            obj = torch.load(path)
+
+            # 2️⃣ 兼容不同保存格式
+            if isinstance(obj, dict):
+                data = obj["data"]
+                labels = obj["labels"]
+            else:
+                data, labels = obj
+
+            all_data.append(data)
+            all_labels.append(labels)
+            print(f"加载 {path} ({len(data)})")
+    print(f"\n总样本数: {sum(len(d) for d in all_data)}")
+    
+    # 3️⃣ 拼接所有块
+    all_data = torch.cat(all_data, dim=0)
+    all_labels = torch.cat(all_labels, dim=0)
+    #torch.save((all_data, all_labels), "merged.pt")
+    
+    dataset = TensorDataset(all_data, all_labels)
+
+    # 4️⃣ 划分数据集
+    total_size = len(dataset)
+    train_size = int(0.75 * total_size)
+    val_size = int(0.15 * total_size)
+    test_size = total_size - train_size - val_size
+
+    generator = torch.Generator().manual_seed(42)
+
+    train_ds, val_ds, test_ds = torch.utils.data.random_split(
+        dataset,
+        [train_size, val_size, test_size],
+        generator=generator
+    )
+
+    # 5️⃣ DataLoader
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=12, pin_memory=True, persistent_workers=True)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True, persistent_workers=True)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True, persistent_workers=True)
+
+
+    return train_loader, val_loader, test_loader, dataset.labels.unique().tolist()
 
 def build_vit_model(d_model: int = None, n_heads: int = None, n_layers: int = None, 
                    patch_size: int = None, n_classes: int = None, d_ff: int = None):
@@ -153,6 +259,7 @@ def train_epoch(model, train_loader, criterion, optimizer, device):
     
     progress_bar = tqdm(train_loader, desc="Training")
     for images, labels in progress_bar:
+        images = images.to(device).float()
         images, labels = images.to(device), labels.to(device)
         
         # 前向传播
@@ -190,6 +297,7 @@ def validate(model, val_loader, criterion, device):
     
     with torch.no_grad():
         for images, labels in tqdm(val_loader, desc="Validating"):
+            images = images.to(device).float()
             images, labels = images.to(device), labels.to(device)
             
             outputs = model(images)
@@ -234,9 +342,8 @@ def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: flo
     
     # 创建数据加载器
     print("加载数据集...")
-    train_loader, val_loader, test_loader, class_names = get_dataloader(
+    train_loader, val_loader, test_loader, class_names = get_tensor_dataloader(
         vit_config['data_dir'], 
-        img_size=vit_config['img_size'], 
         batch_size=batch_size
     )
     print(f"类别: {class_names}")
@@ -307,6 +414,8 @@ def train_vit(num_epochs: int = None, batch_size: int = None, learning_rate: flo
             checkpoint_path = os.path.join(checkpoint_dir, "best_vit_model.pth")
             torch.save(model.state_dict(), checkpoint_path)
             print(f"保存最好的模型到 {checkpoint_path}")
+            
+        torch.cuda.empty_cache()
     
     training_time = time.time() - start_time
     print(f"\n训练完成! 总耗时: {training_time:.2f}秒")
@@ -421,7 +530,9 @@ def get_predictions_and_labels(model, test_loader, device):
     all_labels = []
     with torch.no_grad():
         for images, labels in tqdm(test_loader, desc="Testing"):
-            images, labels = images.to(device), labels.to(device)
+            
+            images, labels = images.to(device).float(), labels.to(device)
+            
             outputs = model(images)
             _, preds = torch.max(outputs, 1)
             all_preds.extend(preds.cpu().numpy())

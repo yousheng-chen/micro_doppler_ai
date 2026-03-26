@@ -287,6 +287,7 @@ class ResNet34(nn.Module):
         
         # Global average pooling and fully connected layer for classification
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.dropout = nn.Dropout(0.5)  # Dropout layer with 50% dropout rate
         self.fc = nn.Linear(n_channels[-1], n_classes)  # n_classes classes for ImageNet
         
         # Initialize weights
@@ -339,6 +340,8 @@ class ResNet34(nn.Module):
         x = self.avgpool(x)
         # Flatten the output for the fully connected layer, except batch size
         x = torch.flatten(x, 1)
+        # dropout before the fully connected layer
+        x = self.dropout(x)
         # Fully connected layer for classification
         return self.fc(x)
     
@@ -368,6 +371,7 @@ class ResNet18(nn.Module):
 
         # Global average pooling and fully connected layer for classification
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.dropout = nn.Dropout(0.5)  # Dropout layer with 50% dropout rate
         self.fc = nn.Linear(n_channels[-1], n_classes)
         
         # Initialize weights
@@ -414,6 +418,7 @@ class ResNet18(nn.Module):
         # Flatten the output for the fully connected layer, except batch size
         x = torch.flatten(x, 1)
         # Fully connected layer for classification
+        x = self.dropout(x)
         return self.fc(x)
     
     def info(self):

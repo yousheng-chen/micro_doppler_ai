@@ -1,3 +1,10 @@
+"""
+这个脚本用于处理其他5个数据集类别（Jog、Marking time、Shadow boxing、Walk、Wava），
+通过调整亮度和对比度来增强图像，从而增大数据集的规模。每张原始图像将生成2个增强版本，
+最终输出处理后的图像数量和增长倍数。
+"""
+
+
 import os
 import random
 from pathlib import Path

@@ -1,0 +1,11 @@
+
+总样本数: 35999
+类别: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+构建ResNet18模型...
+模型信息:
+ResNet18 Model Summary:
+Input channels: 3
+First kernel size: 7
+Number of classes: 9
+Total parameters: 11,185,929
+Trainable parameters: 11,185,929

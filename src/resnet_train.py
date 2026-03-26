@@ -13,7 +13,22 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import random
 from typing import Tuple
+from PIL import Image
+import numpy as np
+import os
+from torch.utils.data import Dataset
 
+
+class TensorDataset(Dataset):
+    def __init__(self, data, labels):
+        self.data = data
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx], self.labels[idx]
 
 
 # Prepare dataloader
@@ -33,6 +48,7 @@ def get_dataloader(data_dir, seed=42, img_size: list = None, batch_size: int = N
         ]
     )
     
+
     dataset = datasets.ImageFolder(root=data_dir, transform=transform)
     
     total_size = len(dataset)
@@ -40,20 +56,136 @@ def get_dataloader(data_dir, seed=42, img_size: list = None, batch_size: int = N
     val_size = int(0.15 * total_size)
     test_size = total_size - train_size - val_size
     
+    # 打印数据集大小
+    print(f"总样本数: {total_size}, 训练样本数: {train_size}, 验证样本数: {val_size}, 测试样本数: {test_size}")
+    # # 打印每个类别的样本数量
+    # class_counts = {}
+    # for _, label in dataset:
+    #     class_counts[label] = class_counts.get(label, 0) + 1
+    # print("每个类别的样本数量:")
+    # for label, count in class_counts.items():
+    #     print(f"  类别 {label}: {count}")
+    # print(class_counts)
+    """
+    总样本数: 35999, 训练样本数: 25199, 验证样本数: 5399, 测试样本数: 5401
+    
+    """    
+
     train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
         dataset, 
         [train_size, val_size, test_size],
         generator=torch.Generator().manual_seed(seed)
         )
     
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=12, pin_memory=True, persistent_workers=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True, persistent_workers=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=12, pin_memory=True, persistent_workers=True)
     
     return train_loader, val_loader, test_loader, dataset.classes
 
+def get_all_data(datapath) -> Tuple[torch.Tensor, torch.Tensor]:
+    # Implementation for getting all data from a given path
+    all_data = []
+    all_labels = []
+    obj = torch.load(path)
 
-def build_resnet18(img_channels: int = 3, first_kernel_size: int = 7, num_classes: int = 6) -> ResNet18:
+    # 2️⃣ 兼容不同保存格式
+    if isinstance(obj, dict):
+        data = obj["data"]
+        labels = obj["labels"]
+    else:
+        data, labels = obj
+        
+    all_data.append(data)
+    all_labels.append(labels)
+    
+    dataset = TensorDataset(all_data, all_labels)
+    
+    # 4️⃣ 划分数据集
+    total_size = len(dataset)
+    train_size = int(0.75 * total_size)
+    val_size = int(0.15 * total_size)
+    test_size = total_size - train_size - val_size
+
+    generator = torch.Generator().manual_seed(42)
+
+    train_ds, val_ds, test_ds = torch.utils.data.random_split(
+        dataset,
+        [train_size, val_size, test_size],
+        generator=generator
+    )
+
+    # 5️⃣ DataLoader
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True, persistent_workers=True)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True, persistent_workers=True)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True, persistent_workers=True)
+
+
+    return train_loader, val_loader, test_loader, dataset.labels.unique().tolist()
+        
+def get_tensor_dataloader(data_dir, batch_size: int = None) -> Tuple[DataLoader, DataLoader, DataLoader]:
+    all_data = []
+    all_labels = []
+
+    # 1️⃣ 遍历 cache 目录
+    for file in os.listdir(data_dir):
+        if file.endswith(".pt"):
+            path = os.path.join(data_dir, file)
+            obj = torch.load(path)
+
+            # 2️⃣ 兼容不同保存格式
+            if isinstance(obj, dict):
+                data = obj["data"]
+                labels = obj["labels"]
+            else:
+                data, labels = obj
+
+            all_data.append(data)
+            all_labels.append(labels)
+            print(f"加载 {path} ({len(data)})")
+    print(f"\n总样本数: {sum(len(d) for d in all_data)}")
+    
+    # 3️⃣ 拼接所有块
+    all_data = torch.cat(all_data, dim=0)
+    all_labels = torch.cat(all_labels, dim=0)
+    torch.save((all_data, all_labels), "merged.pt")
+    
+    dataset = TensorDataset(all_data, all_labels)
+
+    for _ in range(5):  # 打乱5次
+        # 🔥 1. 打乱索引
+        perm = torch.randperm(len(all_data))
+
+        # 🔥 2. 重新排列数据
+        all_data = all_data[perm]
+        all_labels = all_labels[perm]
+
+    # 🔥 3. 再构建 dataset
+    dataset = TensorDataset(all_data, all_labels)
+
+    # 4️⃣ 划分数据集
+    total_size = len(dataset)
+    train_size = int(0.75 * total_size)
+    val_size = int(0.15 * total_size)
+    test_size = total_size - train_size - val_size
+
+    generator = torch.Generator().manual_seed(42)
+
+    train_ds, val_ds, test_ds = torch.utils.data.random_split(
+        dataset,
+        [train_size, val_size, test_size],
+        generator=generator
+    )
+
+    # 5️⃣ DataLoader
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True, persistent_workers=True)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True, persistent_workers=True)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True, persistent_workers=True)
+
+
+    return train_loader, val_loader, test_loader, dataset.labels.unique().tolist()
+
+def build_resnet18(img_channels: int = 3, first_kernel_size: int = 7, num_classes: int = 9) -> ResNet18:
     model = ResNet18(img_channels = img_channels, first_kernel_size = first_kernel_size, n_classes=num_classes)
     return model
 
@@ -64,6 +196,7 @@ def train_epoch(model, train_loader, criterion, optimizer, device):
     total = 0
     
     for inputs, labels in tqdm(train_loader, desc="Training", leave=False):
+        inputs = inputs.to(device).float()
         inputs, labels = inputs.to(device), labels.to(device)
         
         # forward 
@@ -97,6 +230,7 @@ def validate(model, val_loader, criterion, device):
     
     with torch.no_grad():
         for inputs, labels in tqdm(val_loader, desc="Validating", leave=False):
+            inputs = inputs.to(device).float()
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, labels)
@@ -135,9 +269,8 @@ def train_resnet18(num_epochs: int = None, batch_size: int = None, learning_rate
     print(f"Using device: {device}")
 
     # loading data
-    train_loader, val_loader, test_loader, class_names = get_dataloader(
+    train_loader, val_loader, test_loader, class_names = get_tensor_dataloader(
         data_dir=ResNet18_config['data_dir'], 
-        img_size=ResNet18_config['img_size'], 
         batch_size=batch_size
     )
     
@@ -153,7 +286,7 @@ def train_resnet18(num_epochs: int = None, batch_size: int = None, learning_rate
     print(f"模型信息:\n{model.info()}") 
     
     # loss function and optimizer
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=ResNet18_config['weight_decay'])
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1) # 等间隔调整（Step Decay）
     
@@ -197,9 +330,11 @@ def train_resnet18(num_epochs: int = None, batch_size: int = None, learning_rate
         # save the best model based on validation accuracy
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            checkpoint_path = os.path.join(checkpoint_dir, "best_vit_model.pth")
+            checkpoint_path = os.path.join(checkpoint_dir, "best_resnet18_model.pth")
             torch.save(model.state_dict(), checkpoint_path)
             print(f"保存最好的模型到 {checkpoint_path}")
+        
+        torch.cuda.empty_cache()
         
     # print training time    
     training_time = time.time() - start_time
@@ -220,7 +355,7 @@ def train_resnet18(num_epochs: int = None, batch_size: int = None, learning_rate
     
     # test the best model on the test set
     print("\n测试模型...")
-    model.load_state_dict(torch.load(os.path.join(checkpoint_dir, "best_vit_model.pth")))
+    model.load_state_dict(torch.load(os.path.join(checkpoint_dir, "best_resnet18_model.pth")))
 
 
     # 加载训练历史并绘制
@@ -229,7 +364,7 @@ def train_resnet18(num_epochs: int = None, batch_size: int = None, learning_rate
     plot_training_history(history, save_path=os.path.join(ResNet18_config['checkpoint_dir'], 'training_history.png'))
     
     # 加载最好的模型
-    model.load_state_dict(torch.load(os.path.join(ResNet18_config['checkpoint_dir'], "best_vit_model.pth")))
+    model.load_state_dict(torch.load(os.path.join(ResNet18_config['checkpoint_dir'], "best_resnet18_model.pth")))
 
     # 计算预测和标签
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -239,6 +374,7 @@ def train_resnet18(num_epochs: int = None, batch_size: int = None, learning_rate
     cm = confusion_matrix(labels, preds)
     
     # 绘制混淆矩阵
+    print("绘制混淆矩阵...")
     plot_confusion_matrix(cm, class_names, save_path=os.path.join(ResNet18_config['checkpoint_dir'], 'confusion_matrix.png'))
     
     test_loss, test_acc = validate(model, test_loader, criterion, device)
@@ -313,6 +449,7 @@ def get_predictions_and_labels(model, test_loader, device):
     all_labels = []
     with torch.no_grad():
         for images, labels in tqdm(test_loader, desc="Testing"):
+            images = images.to(device).float()
             images, labels = images.to(device), labels.to(device)
             outputs = model(images)
             _, preds = torch.max(outputs, 1)

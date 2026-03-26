@@ -1,0 +1,105 @@
+
+总样本数: 35999
+类别: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+构建ResNet18模型...
+模型信息:
+ResNet18 Model Summary:
+Input channels: 3
+First kernel size: 7
+Number of classes: 9
+Total parameters: 11,185,929
+Trainable parameters: 11,185,929
+
+
+开始训练...
+
+第 1/20 个Epoch
+训练 Loss: 0.8540, 训练 Accuracy: 83.7068                                                                                    
+验证 Loss: 0.5271, 验证 Accuracy: 99.6296
+保存最好的模型到 ../checkpoint/resnet18/best_resnet18_model.pth
+
+第 2/20 个Epoch
+训练 Loss: 0.5180, 训练 Accuracy: 99.7963                                                                                    
+验证 Loss: 0.5036, 验证 Accuracy: 99.6296
+
+第 3/20 个Epoch
+训练 Loss: 0.5056, 训练 Accuracy: 99.9481                                                                                    
+验证 Loss: 0.4972, 验证 Accuracy: 99.9815
+保存最好的模型到 ../checkpoint/resnet18/best_resnet18_model.pth
+
+第 4/20 个Epoch
+训练 Loss: 0.5022, 训练 Accuracy: 99.9444                                                                                    
+验证 Loss: 0.4940, 验证 Accuracy: 99.9815
+
+第 5/20 个Epoch
+训练 Loss: 0.4987, 训练 Accuracy: 99.9963                                                                                    
+验证 Loss: 0.4872, 验证 Accuracy: 100.0000
+保存最好的模型到 ../checkpoint/resnet18/best_resnet18_model.pth
+
+第 6/20 个Epoch
+训练 Loss: 0.4960, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4862, 验证 Accuracy: 100.0000
+
+第 7/20 个Epoch
+训练 Loss: 0.4955, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4861, 验证 Accuracy: 100.0000
+
+第 8/20 个Epoch
+训练 Loss: 0.4956, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4861, 验证 Accuracy: 100.0000
+
+第 9/20 个Epoch
+训练 Loss: 0.4954, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4859, 验证 Accuracy: 100.0000
+
+第 10/20 个Epoch
+训练 Loss: 0.4951, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4860, 验证 Accuracy: 100.0000
+
+第 11/20 个Epoch
+训练 Loss: 0.4950, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4859, 验证 Accuracy: 100.0000
+
+第 12/20 个Epoch
+训练 Loss: 0.4950, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4859, 验证 Accuracy: 100.0000
+
+第 13/20 个Epoch
+训练 Loss: 0.4950, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4860, 验证 Accuracy: 100.0000
+
+第 14/20 个Epoch
+训练 Loss: 0.4948, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4860, 验证 Accuracy: 100.0000
+
+第 15/20 个Epoch
+训练 Loss: 0.4949, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4859, 验证 Accuracy: 100.0000
+
+第 16/20 个Epoch
+训练 Loss: 0.4948, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4858, 验证 Accuracy: 100.0000
+
+第 17/20 个Epoch
+训练 Loss: 0.4949, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4859, 验证 Accuracy: 100.0000
+
+第 18/20 个Epoch
+训练 Loss: 0.4949, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4859, 验证 Accuracy: 100.0000
+
+第 19/20 个Epoch
+训练 Loss: 0.4950, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4859, 验证 Accuracy: 100.0000
+
+第 20/20 个Epoch
+训练 Loss: 0.4949, 训练 Accuracy: 100.0000                                                                                   
+验证 Loss: 0.4859, 验证 Accuracy: 100.0000
+训练时间: 275.22 秒
+最佳验证精度: 100.00%
+保存训练历史到 ../checkpoint/resnet18/training_history.pkl
+
+测试模型...
+Testing: 100%|███████████████████████████████████████████████████████████████████████████████| 29/29 [00:01<00:00, 26.29it/s]
+绘制混淆矩阵...
+测试损失: 0.4874, 测试精度: 100.00%   
